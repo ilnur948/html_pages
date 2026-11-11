@@ -23,7 +23,12 @@
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     border-bottom:1px solid var(--line); padding:10px 12px; display:flex; gap:8px; align-items:center;}
   header h1{font-size:17px; margin:0; font-weight:700; flex:1;}
-  header button{font-size:13px;}
+  
+  /* Кнопка меню гамбургер */
+  .menu-btn { background: transparent; border: none; padding: 4px; display: flex; flex-direction: column; gap: 5px; cursor: pointer; }
+  .menu-btn span { display: block; width: 24px; height: 3px; background: var(--txt); border-radius: 2px; transition: 0.2s; }
+  .menu-btn:active span { background: var(--dim); }
+
   .wrap{padding:12px; max-width:640px; margin:0 auto; padding-bottom:120px;}
   .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:12px; margin-bottom:12px;}
   .card h2{margin:0 0 10px; font-size:15px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:.5px;}
@@ -84,11 +89,13 @@
   .field label{display:block; font-size:12px; color:var(--dim); margin-bottom:6px;
     text-transform:uppercase; letter-spacing:.5px; font-weight:600;}
 
-  /* Кнопки выбора дней в модалке */
-  .chips{display:flex; gap:6px; flex-wrap:wrap;}
-  .chip{padding:6px 12px; border-radius:20px; border:1px solid var(--line); background:var(--card2);
-    font-size:13px; font-weight:600; cursor:pointer; color:var(--txt); flex:1; text-align:center;}
-  .chip.on{background:var(--acc); color:#1a1a1d; border-color:var(--acc);}
+  /* Список ссылок в меню */
+  .menu-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .menu-item { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--card2); 
+               border-radius: 12px; text-decoration: none; color: var(--txt); font-weight: 600; font-size: 16px;
+               border: 1px solid var(--line); transition: background 0.1s; }
+  .menu-item:active { background: var(--line); }
+  .menu-item .icon { font-size: 20px; }
 
   .fab{position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:20;
     width:56px; height:56px; border-radius:28px; background:var(--acc); color:#1a1a1d;
@@ -106,10 +113,10 @@
 
 <header>
   <h1>Трекер</h1>
-  <a href="counter.html" class="sm ghost" style="text-decoration: none; display: flex;
-    align-items: center; padding: 6px 10px; border-radius: 10px;
-    border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--txt); ">⏱ Счетчик</a>
-  <button class="sm ghost" id="btnMenu">⋯</button>
+  <!-- Новая кнопка меню (гамбургер) -->
+  <button class="menu-btn" id="btnMenu" title="Меню">
+    <span></span><span></span><span></span>
+  </button>
 </header>
 
 <div class="wrap" id="app"></div>
@@ -134,7 +141,6 @@ function load(){
     if(raw){
       const d = JSON.parse(raw);
       if(d && Array.isArray(d.groups)){
-        // Миграция старых данных: если у группы нет массива дней, создаем пустой
         d.groups.forEach(g => { if(!Array.isArray(g.days)) g.days = []; });
         return d;
       }
@@ -169,13 +175,11 @@ function render(){
       const over = goal>0 && done>=goal;
       const total = Math.max(goal, done, 1);
       
-      // Клетки подходов
       const cells = [];
       for(let i=0;i<total;i++){
         cells.push(`<div class="cell ${g.checked[i]?'on':''}" data-gid="${g.id}" data-idx="${i}">${i+1}</div>`);
       }
 
-      // Дни недели для этой группы
       let daysHTML = '';
       DAYS.forEach((d, i) => {
         const dt = new Date(ws); dt.setDate(ws.getDate()+i);
@@ -215,7 +219,6 @@ function render(){
 }
 
 function bindMain(){
-  // Клики по клеткам подходов
   document.querySelectorAll('.cell').forEach(el=>{
     el.onclick = ()=>{
       const g = db.groups.find(x=>x.id===el.dataset.gid);
@@ -227,7 +230,6 @@ function bindMain(){
     };
   });
 
-  // Клики по дням недели внутри группы
   document.querySelectorAll('.day[data-gid]').forEach(el=>{
     el.onclick = ()=>{
       const g = db.groups.find(x=>x.id===el.dataset.gid);
@@ -235,18 +237,16 @@ function bindMain(){
       if(!g.days) g.days = [];
       const dayKey = el.dataset.day;
       const idx = g.days.indexOf(dayKey);
-      if(idx > -1) g.days.splice(idx, 1); // Если уже есть - убираем
-      else g.days.push(dayKey);           // Если нет - добавляем
+      if(idx > -1) g.days.splice(idx, 1);
+      else g.days.push(dayKey);
       save(); render();
     };
   });
 
-  // Клики по кнопкам редактирования
   document.querySelectorAll('[data-edit]').forEach(b=>{
     b.onclick = ()=> openGroupModal(b.dataset.edit);
   });
   
-  // Клики по очистке
   document.querySelectorAll('[data-clear]').forEach(b=>{
     b.onclick = ()=>{
       const g = db.groups.find(x=>x.id===b.dataset.clear);
@@ -311,6 +311,34 @@ function openGroupModal(id){
 function openMenu(){
   openModal(`
     <h3>Меню</h3>
+    
+    <!-- Ссылки на другие страницы -->
+    <div class="menu-list">
+      <a href="counter.html" class="menu-item">
+        <span class="icon">⏱</span> Счетчик
+      </a>
+      <!-- Сюда добавляйте новые страницы:
+      <a href="newpage.html" class="menu-item">
+        <span class="icon">📝</span> Новая страница
+      </a>
+      -->
+    </div>
+
+    <div class="hr"></div>
+    
+    <!-- Системные кнопки -->
+    <div class="menu-list">
+      <button class="menu-item" id="btnReload" style="text-align: left; background: transparent; padding-left: 16px; width: 100%;">
+        <span class="icon">🔄</span> Обновить страницу
+      </button>
+      <!-- Ссылка на открытие в Safari -->
+      <a href="https://ilnur948.github.io/html_pages/" class="menu-item" target="_blank">
+        <span class="icon">🧭</span> Открыть в Safari
+      </a>
+    </div>
+
+    <div class="hr"></div>
+    
     <div class="muted" style="margin-bottom:8px; text-transform:uppercase; font-size:12px; letter-spacing:.5px; font-weight:600">Данные</div>
     <div class="row" style="margin-bottom:8px">
       <button class="sm" id="m_exp">📤 Экспорт JSON</button>
@@ -319,10 +347,18 @@ function openMenu(){
     <input type="file" id="m_file" accept=".json,application/json" style="display:none">
     <div class="hr"></div>
     <button class="sm danger" id="m_reset">Сбросить всё</button>
+    
     <div class="row" style="margin-top:16px">
       <button class="ghost" onclick="closeModal()">Закрыть</button>
     </div>
   `);
+
+  // Кнопка принудительного обновления
+  document.getElementById('btnReload').onclick = () => {
+    window.location.reload();
+  };
+
+  // Экспорт/Импорт
   document.getElementById('m_exp').onclick = ()=>{
     const blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -366,9 +402,19 @@ document.getElementById('btnMenu').onclick = openMenu;
 /* ============ Старт ============ */
 render();
 
-/* ============ Service Worker ============ */
+/* ============ Service Worker + Автообновление ============ */
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    // Сразу проверяем при запуске
+    reg.update();
+    
+    // Проверяем каждую минуту, если есть интернет
+    setInterval(() => {
+      if (navigator.onLine) {
+        reg.update();
+      }
+    }, 60000); 
+  }).catch(()=>{});
 }
 </script>
 </body>
