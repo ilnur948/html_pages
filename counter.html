@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111">
+<title>Счетчик</title>
+<style>
+  /* Базовые стили взяты из вашего трекера для единого стиля */
+  :root{
+    --bg:#0e0e10; --card:#1a1a1d; --card2:#232327; --line:#2e2e33;
+    --txt:#f2f2f5; --dim:#9a9aa3; --acc:#ffb020; --ok:#3ddc84; --bad:#ff4d4d;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    font-size:16px; line-height:1.35; height:100%;}
+  
+  .wrap{padding:20px; max-width:480px; margin:0 auto; height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;}
+  
+  h1 { font-size: 22px; margin-bottom: 30px; font-weight: 700; }
+  
+  /* Стили для огромного числа */
+  .count-display {
+    font-size: 96px;
+    font-weight: 800;
+    color: var(--acc);
+    margin-bottom: 40px;
+    font-variant-numeric: tabular-nums; /* Чтобы цифры не прыгали при смене */
+    line-height: 1;
+  }
+
+  /* Контейнер для кнопок */
+  .controls {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  /* Кнопки плюс и минус */
+  button {
+    background: var(--card2); color: var(--txt); border: 1px solid var(--line);
+    border-radius: 16px; font-weight: 700; cursor: pointer;
+    transition: transform 0.1s, background 0.1s;
+  }
+  button:active { transform: scale(0.95); background: var(--line); }
+  
+  .btn-main {
+    flex: 1;
+    height: 100px;
+    font-size: 48px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Кнопка сброса */
+  .btn-reset {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    color: var(--bad);
+    background: transparent;
+    border: 1px solid var(--bad);
+  }
+  .btn-reset:active { background: rgba(255, 77, 77, 0.1); }
+
+  /* Кнопка "Назад в трекер" */
+  .back-link {
+    margin-top: 40px;
+    color: var(--dim);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .back-link:hover { color: var(--txt); }
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Счетчик</h1>
+  
+  <div class="count-display" id="number">0</div>
+
+  <div class="controls">
+    <!-- Кнопка минус -->
+    <button class="btn-main" onclick="change(-1)">−</button>
+    <!-- Кнопка плюс -->
+    <button class="btn-main" onclick="change(1)">+</button>
+  </div>
+
+  <!-- Кнопка сброса -->
+  <button class="btn-reset" onclick="reset()">Сбросить</button>
+
+  <!-- Ссылка обратно на главную -->
+  <a href="./" class="back-link">← Вернуться в Трекер</a>
+</div>
+
+<script>
+  // 1. Получаем элементы из HTML, чтобы менять их из JS
+  const display = document.getElementById('number');
+  
+  // 2. Пытаемся загрузить сохраненное число из памяти (localStorage). 
+  // Если там пусто, ставим 0.
+  let count = parseInt(localStorage.getItem('my_counter')) || 0;
+  
+  // 3. Функция обновления экрана. Берет число из переменной и пишет в HTML
+  function updateDisplay() {
+    display.textContent = count;
+  }
+
+  // 4. Функция изменения числа (плюс или минус)
+  function change(amount) {
+    count += amount;
+    if (count < 0) count = 0; // Запрещаем уходить в минус (можете убрать эту строку)
+    
+    // Сохраняем в память браузера
+    localStorage.setItem('my_counter', count);
+    
+    // Обновляем то, что видно на экране
+    updateDisplay();
+    
+    // Добавим легкую вибрацию (если телефон поддерживает)
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+
+  // 5. Функция сброса
+  function reset() {
+    if(confirm('Сбросить счетчик на 0?')) {
+      count = 0;
+      localStorage.setItem('my_counter', count);
+      updateDisplay();
+    }
+  }
+
+  // 6. При загрузке страницы сразу показываем правильное число
+  updateDisplay();
+</script>
+
+</body>
+</html>
