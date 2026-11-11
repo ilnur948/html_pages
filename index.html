@@ -66,16 +66,6 @@
   .cell.on{background:var(--acc); color:#1a1a1d; border-color:var(--acc);}
   .empty{color:var(--dim); font-size:14px; text-align:center; padding:20px 0;}
 
-  /* Дни недели внутри группы */
-  .days{display:flex; gap:4px; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);}
-  .day{flex:1; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
-    background:var(--card); border:1px solid var(--line); border-radius:8px;
-    font-weight:700; font-size:11px; color:var(--dim); cursor:pointer; user-select:none; position:relative;
-    transition:background .12s;}
-  .day:active{transform:scale(.95);}
-  .day.done{background:var(--acc); color:#1a1a1d; border-color:var(--acc);}
-  .day.today{outline:2px solid var(--ok); outline-offset:-2px;}
-
   /* Модалка */
   .modal{position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; display:none;
     align-items:flex-end; justify-content:center;}
@@ -113,7 +103,6 @@
 
 <header>
   <h1>Трекер</h1>
-  <!-- Новая кнопка меню (гамбургер) -->
   <button class="menu-btn" id="btnMenu" title="Меню">
     <span></span><span></span><span></span>
   </button>
@@ -130,9 +119,6 @@
 const LS = 'gym_v2';
 const uid = () => Math.random().toString(36).slice(2,10);
 const todayISO = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-const nowISO = () => new Date().toISOString();
-const weekStart = (d=new Date()) => { const x=new Date(d); x.setHours(0,0,0,0); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; };
-const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
 let db = load();
 function load(){
@@ -141,12 +127,11 @@ function load(){
     if(raw){
       const d = JSON.parse(raw);
       if(d && Array.isArray(d.groups)){
-        d.groups.forEach(g => { if(!Array.isArray(g.days)) g.days = []; });
         return d;
       }
     }
   }catch(e){}
-  return { groups:[], days:{} };
+  return { groups:[] };
 }
 function save(){
   try{ localStorage.setItem(LS, JSON.stringify(db)); }
@@ -161,8 +146,6 @@ function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;
 /* ============ Рендер ============ */
 function render(){
   const app = document.getElementById('app');
-  const todayKey = todayISO();
-  const ws = weekStart();
 
   let groupsHTML = '';
   if(db.groups.length===0){
@@ -175,19 +158,11 @@ function render(){
       const over = goal>0 && done>=goal;
       const total = Math.max(goal, done, 1);
       
+      // Клетки подходов
       const cells = [];
       for(let i=0;i<total;i++){
         cells.push(`<div class="cell ${g.checked[i]?'on':''}" data-gid="${g.id}" data-idx="${i}">${i+1}</div>`);
       }
-
-      let daysHTML = '';
-      DAYS.forEach((d, i) => {
-        const dt = new Date(ws); dt.setDate(ws.getDate()+i);
-        const key = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
-        const isDone = g.days && g.days.includes(key);
-        const isToday = key === todayKey;
-        daysHTML += `<div class="day ${isDone?'done':''} ${isToday?'today':''}" data-gid="${g.id}" data-day="${key}">${d}</div>`;
-      });
 
       return `
         <div class="grp">
@@ -199,10 +174,9 @@ function render(){
             </div>
           </div>
           <div class="cells">${cells.join('')}</div>
-          <div class="days">${daysHTML}</div>
           <div class="row" style="margin-top:10px">
             <button class="sm ghost" data-edit="${g.id}">✏️ изменить</button>
-            <button class="sm ghost" data-clear="${g.id}">🧹 очистить клетки</button>
+            <button class="sm ghost" data-clear="${g.id}">🧹 очистить</button>
           </div>
         </div>`;
     }).join('');
@@ -219,6 +193,7 @@ function render(){
 }
 
 function bindMain(){
+  // Клики по клеткам подходов
   document.querySelectorAll('.cell').forEach(el=>{
     el.onclick = ()=>{
       const g = db.groups.find(x=>x.id===el.dataset.gid);
@@ -230,23 +205,12 @@ function bindMain(){
     };
   });
 
-  document.querySelectorAll('.day[data-gid]').forEach(el=>{
-    el.onclick = ()=>{
-      const g = db.groups.find(x=>x.id===el.dataset.gid);
-      if(!g) return;
-      if(!g.days) g.days = [];
-      const dayKey = el.dataset.day;
-      const idx = g.days.indexOf(dayKey);
-      if(idx > -1) g.days.splice(idx, 1);
-      else g.days.push(dayKey);
-      save(); render();
-    };
-  });
-
+  // Клики по кнопкам редактирования
   document.querySelectorAll('[data-edit]').forEach(b=>{
     b.onclick = ()=> openGroupModal(b.dataset.edit);
   });
   
+  // Клики по очистке
   document.querySelectorAll('[data-clear]').forEach(b=>{
     b.onclick = ()=>{
       const g = db.groups.find(x=>x.id===b.dataset.clear);
@@ -295,13 +259,13 @@ function openGroupModal(id){
       while(editing.checked.length < goal) editing.checked.push(false);
       if(editing.checked.length > goal) editing.checked.length = goal;
     } else {
-      db.groups.push({ id:uid(), name, goal, checked:Array(goal).fill(false), days: [] });
+      db.groups.push({ id:uid(), name, goal, checked:Array(goal).fill(false) });
     }
     save(); closeModal(); render(); toast(editing?'Сохранено':'Добавлено');
   };
   const del = document.getElementById('g_del');
   if(del) del.onclick = ()=>{
-    if(!confirm('Удалить группу?')) return;
+    if(!confirm('Удалить трекер?')) return;
     db.groups = db.groups.filter(g=>g.id!==editing.id);
     save(); closeModal(); render(); toast('Удалено');
   };
@@ -312,26 +276,18 @@ function openMenu(){
   openModal(`
     <h3>Меню</h3>
     
-    <!-- Ссылки на другие страницы -->
     <div class="menu-list">
       <a href="counter.html" class="menu-item">
         <span class="icon">⏱</span> Счетчик
       </a>
-      <!-- Сюда добавляйте новые страницы:
-      <a href="newpage.html" class="menu-item">
-        <span class="icon">📝</span> Новая страница
-      </a>
-      -->
     </div>
 
     <div class="hr"></div>
     
-    <!-- Системные кнопки -->
     <div class="menu-list">
       <button class="menu-item" id="btnReload" style="text-align: left; background: transparent; padding-left: 16px; width: 100%;">
         <span class="icon">🔄</span> Обновить страницу
       </button>
-      <!-- Ссылка на открытие в Safari -->
       <a href="https://ilnur948.github.io/html_pages/" class="menu-item" target="_blank">
         <span class="icon">🧭</span> Открыть в Safari
       </a>
@@ -353,12 +309,10 @@ function openMenu(){
     </div>
   `);
 
-  // Кнопка принудительного обновления
   document.getElementById('btnReload').onclick = () => {
     window.location.reload();
   };
 
-  // Экспорт/Импорт
   document.getElementById('m_exp').onclick = ()=>{
     const blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -379,9 +333,8 @@ function openMenu(){
           id: g.id || uid(),
           name: String(g.name||'').trim() || 'Без названия',
           goal: Math.max(0, parseInt(g.goal,10)||0),
-          checked: Array.isArray(g.checked)? g.checked.map(Boolean) : [],
-          days: Array.isArray(g.days)? g.days : []
-        })), days: data.days || {} };
+          checked: Array.isArray(g.checked)? g.checked.map(Boolean) : []
+        })) };
         save(); closeModal(); render(); toast('Импортировано');
       }catch(err){ toast('Неверный файл'); }
     };
@@ -390,7 +343,7 @@ function openMenu(){
   document.getElementById('m_reset').onclick = ()=>{
     if(!confirm('Удалить ВСЕ данные? Это необратимо.')) return;
     if(!confirm('Точно? Лучше сначала сделай экспорт.')) return;
-    db = { groups:[], days:{} };
+    db = { groups:[] };
     save(); closeModal(); render(); toast('Сброшено');
   };
 }
@@ -402,18 +355,11 @@ document.getElementById('btnMenu').onclick = openMenu;
 /* ============ Старт ============ */
 render();
 
-/* ============ Service Worker + Автообновление ============ */
+/* ============ Service Worker ============ */
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').then(reg => {
-    // Сразу проверяем при запуске
     reg.update();
-    
-    // Проверяем каждую минуту, если есть интернет
-    setInterval(() => {
-      if (navigator.onLine) {
-        reg.update();
-      }
-    }, 60000); 
+    setInterval(() => { if (navigator.onLine) reg.update(); }, 60000); 
   }).catch(()=>{});
 }
 </script>
