@@ -1,4 +1,4 @@
-const CACHE = 'gym-v8'; // Меняем версию каждый раз
+const CACHE = 'gym-v9'; // Меняем версию каждый раз
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {
