@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Зал">
+<meta name="theme-color" content="#111">
+<title>Зал</title>
+<style>
+  :root{
+    --bg:#0e0e10; --card:#1a1a1d; --card2:#232327; --line:#2e2e33;
+    --txt:#f2f2f5; --dim:#9a9aa3; --acc:#ffb020; --ok:#3ddc84; --bad:#ff4d4d;
+    --r:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    font-size:16px; line-height:1.35;}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+  header{position:sticky; top:0; z-index:10; background:rgba(14,14,16,.92);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line); padding:10px 12px; display:flex; gap:8px; align-items:center;}
+  header h1{font-size:17px; margin:0; font-weight:700; flex:1;}
+  header button{font-size:13px;}
+  .wrap{padding:12px; max-width:640px; margin:0 auto; padding-bottom:120px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:12px; margin-bottom:12px;}
+  .card h2{margin:0 0 10px; font-size:15px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:.5px;}
+  button{background:var(--card2); color:var(--txt); border:1px solid var(--line);
+    border-radius:10px; padding:10px 14px; font-size:15px; font-weight:600; cursor:pointer;}
+  button:active{transform:scale(.97);}
+  button.acc{background:var(--acc); color:#1a1a1d; border-color:var(--acc);}
+  button.ghost{background:transparent;}
+  button.sm{padding:6px 10px; font-size:13px;}
+  button.danger{color:var(--bad);}
+  input,select{background:var(--card2); color:var(--txt); border:1px solid var(--line);
+    border-radius:10px; padding:11px 12px; font-size:16px; width:100%; font-family:inherit;}
+  input:focus,select:focus{outline:none; border-color:var(--acc);}
+  .row{display:flex; gap:8px; align-items:center;}
+  .row > *{flex:1;}
+  .row > .fix{flex:0 0 auto;}
+  .muted{color:var(--dim); font-size:13px;}
+  .hr{height:1px; background:var(--line); margin:12px 0;}
+
+  .days{display:flex; gap:6px; margin-top:4px;}
+  .day{flex:1; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+    background:var(--card2); border:1px solid var(--line); border-radius:12px;
+    font-weight:700; font-size:13px; color:var(--dim); cursor:pointer; user-select:none; position:relative;}
+  .day.done{background:var(--acc); color:#1a1a1d; border-color:var(--acc);}
+  .day.today{outline:2px solid var(--ok); outline-offset:-2px;}
+
+  .grp{background:var(--card2); border-radius:12px; padding:12px; margin-top:10px; border:1px solid var(--line);}
+  .grp-head{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .grp-title{font-weight:700; font-size:16px; flex:1;}
+  .grp-count{font-size:13px; color:var(--dim); font-variant-numeric:tabular-nums; text-align:right;}
+  .grp-count b{color:var(--txt);}
+  .grp-count.over b{color:var(--ok);}
+  .cells{display:grid; grid-template-columns:repeat(auto-fill, minmax(44px, 1fr)); gap:8px;}
+  .cell{aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+    background:#2a2a30; border:1px solid var(--line); border-radius:10px;
+    font-size:16px; font-weight:700; color:var(--dim); cursor:pointer; user-select:none;
+    transition:background .12s, color .12s, transform .08s;}
+  .cell:active{transform:scale(.92);}
+  .cell.on{background:var(--acc); color:#1a1a1d; border-color:var(--acc);}
+  .empty{color:var(--dim); font-size:14px; text-align:center; padding:20px 0;}
+
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; display:none;
+    align-items:flex-end; justify-content:center;}
+  .modal.open{display:flex;}
+  .sheet{background:var(--bg); width:100%; max-width:640px; border-radius:18px 18px 0 0;
+    border-top:1px solid var(--line); padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom));
+    max-height:92vh; overflow-y:auto; animation:up .18s ease-out;}
+  @keyframes up{from{transform:translateY(20px); opacity:.6;} to{transform:translateY(0); opacity:1;}}
+  .sheet h3{margin:0 0 14px; font-size:18px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:12px; color:var(--dim); margin-bottom:6px;
+    text-transform:uppercase; letter-spacing:.5px; font-weight:600;}
+
+  .fab{position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:20;
+    width:56px; height:56px; border-radius:28px; background:var(--acc); color:#1a1a1d;
+    border:none; font-size:28px; font-weight:700; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 20px rgba(255,176,32,.35); cursor:pointer;}
+  .fab:active{transform:scale(.94);}
+
+  .toast{position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom)); transform:translateX(-50%);
+    background:#2a2a30; color:#fff; padding:10px 16px; border-radius:20px; font-size:14px; z-index:200;
+    opacity:0; pointer-events:none; transition:opacity .2s; white-space:nowrap;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Зал</h1>
+  <button class="sm ghost" id="btnMenu">⋯</button>
+</header>
+
+<div class="wrap" id="app"></div>
+<button class="fab" id="btnAdd">+</button>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ Хранилище ============ */
+const LS = 'gym_v2';
+const uid = () => Math.random().toString(36).slice(2,10);
+const todayISO = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const nowISO = () => new Date().toISOString();
+const weekStart = (d=new Date()) => { const x=new Date(d); x.setHours(0,0,0,0); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; };
+const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+let db = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(LS);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d && Array.isArray(d.groups)) return d;
+    }
+  }catch(e){}
+  return { groups:[], days:{} };
+}
+function save(){
+  try{ localStorage.setItem(LS, JSON.stringify(db)); }
+  catch(e){ toast('Ошибка сохранения'); }
+}
+
+/* ============ Вспомогательное ============ */
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1800); }
+function num(v){ const n=parseInt(String(v).replace(',','.'),10); return isFinite(n)?n:0; }
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============ Рендер ============ */
+function render(){
+  const app = document.getElementById('app');
+  const todayKey = todayISO();
+
+  const ws = weekStart();
+  const daysHTML = DAYS.map((d,i)=>{
+    const dt = new Date(ws); dt.setDate(ws.getDate()+i);
+    const key = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+    const done = !!db.days[key];
+    const isToday = key===todayKey;
+    return `<div class="day ${done?'done':''} ${isToday?'today':''}" data-day="${key}">${d}</div>`;
+  }).join('');
+
+  let groupsHTML = '';
+  if(db.groups.length===0){
+    groupsHTML = `<div class="empty">Пока пусто. Нажми «+», добавь мышечную группу и цель подходов на неделю.</div>`;
+  } else {
+    groupsHTML = db.groups.map(g=>{
+      const done = g.checked.filter(Boolean).length;
+      const goal = g.goal || 0;
+      const left = Math.max(0, goal - done);
+      const over = goal>0 && done>=goal;
+      const total = Math.max(goal, done, 1);
+      const cells = [];
+      for(let i=0;i<total;i++){
+        cells.push(`<div class="cell ${g.checked[i]?'on':''}" data-gid="${g.id}" data-idx="${i}">${i+1}</div>`);
+      }
+      return `
+        <div class="grp">
+          <div class="grp-head">
+            <div class="grp-title">${esc(g.name)}</div>
+            <div class="grp-count ${over?'over':''}">
+              <b>${done}</b> / ${goal}
+              ${goal ? (left>0 ? `<br><span class="muted">осталось ${left}</span>` : `<br><span style="color:var(--ok)">цель ✓</span>`) : ''}
+            </div>
+          </div>
+          <div class="cells">${cells.join('')}</div>
+          <div class="row" style="margin-top:10px">
+            <button class="sm ghost" data-edit="${g.id}">✏️ изменить</button>
+            <button class="sm ghost" data-clear="${g.id}">🧹 очистить клетки</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  app.innerHTML = `
+    <div class="card">
+      <h2>Неделя</h2>
+      <div class="days">${daysHTML}</div>
+      <div class="muted" style="margin-top:8px">Отмечай дни, когда тренировался. Неделя с понедельника.</div>
+    </div>
+
+    <div class="card">
+      <h2>Мышечные группы</h2>
+      ${groupsHTML}
+    </div>
+  `;
+
+  bindMain();
+}
+
+function bindMain(){
+  document.querySelectorAll('.day').forEach(el=>{
+    el.onclick = ()=>{
+      const k = el.dataset.day;
+      if(db.days[k]) delete db.days[k];
+      else db.days[k] = nowISO();
+      save(); render();
+    };
+  });
+  document.querySelectorAll('.cell').forEach(el=>{
+    el.onclick = ()=>{
+      const g = db.groups.find(x=>x.id===el.dataset.gid);
+      if(!g) return;
+      const i = +el.dataset.idx;
+      while(g.checked.length <= i) g.checked.push(false);
+      g.checked[i] = !g.checked[i];
+      save(); render();
+    };
+  });
+  document.querySelectorAll('[data-edit]').forEach(b=>{
+    b.onclick = ()=> openGroupModal(b.dataset.edit);
+  });
+  document.querySelectorAll('[data-clear]').forEach(b=>{
+    b.onclick = ()=>{
+      const g = db.groups.find(x=>x.id===b.dataset.clear);
+      if(!g) return;
+      if(!confirm(`Очистить отмеченные клетки «${g.name}»?`)) return;
+      g.checked = [];
+      save(); render(); toast('Очищено');
+    };
+  });
+}
+
+/* ============ Модалки ============ */
+const modal = document.getElementById('modal');
+const sheet = document.getElementById('sheet');
+function openModal(html){ sheet.innerHTML = html; modal.classList.add('open'); }
+function closeModal(){ modal.classList.remove('open'); }
+modal.onclick = (e)=>{ if(e.target===modal) closeModal(); };
+window.closeModal = closeModal;
+
+function openGroupModal(id){
+  const editing = id ? db.groups.find(g=>g.id===id) : null;
+  openModal(`
+    <h3>${editing?'Изменить группу':'Новая мышечная группа'}</h3>
+    <div class="field">
+      <label>Название</label>
+      <input id="g_name" placeholder="Грудь / Спина / Ноги…" value="${editing?esc(editing.name):''}" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Цель подходов в неделю</label>
+      <input id="g_goal" type="number" inputmode="numeric" min="1" placeholder="12" value="${editing?editing.goal:''}">
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="ghost" onclick="closeModal()">Отмена</button>
+      <button class="acc" id="g_save">${editing?'Сохранить':'Добавить'}</button>
+    </div>
+    ${editing?`<div class="hr"></div><button class="danger sm" id="g_del">Удалить группу</button>`:''}
+  `);
+  document.getElementById('g_save').onclick = ()=>{
+    const name = document.getElementById('g_name').value.trim();
+    if(!name){ toast('Введи название'); return; }
+    const goal = num(document.getElementById('g_goal').value);
+    if(goal<=0){ toast('Цель должна быть больше 0'); return; }
+    if(editing){
+      editing.name = name;
+      editing.goal = goal;
+      while(editing.checked.length < goal) editing.checked.push(false);
+      if(editing.checked.length > goal) editing.checked.length = goal;
+    } else {
+      db.groups.push({ id:uid(), name, goal, checked:Array(goal).fill(false) });
+    }
+    save(); closeModal(); render(); toast(editing?'Сохранено':'Добавлено');
+  };
+  const del = document.getElementById('g_del');
+  if(del) del.onclick = ()=>{
+    if(!confirm('Удалить группу?')) return;
+    db.groups = db.groups.filter(g=>g.id!==editing.id);
+    save(); closeModal(); render(); toast('Удалено');
+  };
+  setTimeout(()=>document.getElementById('g_name').focus(), 50);
+}
+
+function openMenu(){
+  openModal(`
+    <h3>Меню</h3>
+    <div class="muted" style="margin-bottom:8px; text-transform:uppercase; font-size:12px; letter-spacing:.5px; font-weight:600">Данные</div>
+    <div class="row" style="margin-bottom:8px">
+      <button class="sm" id="m_exp">📤 Экспорт JSON</button>
+      <button class="sm" id="m_imp">📥 Импорт JSON</button>
+    </div>
+    <input type="file" id="m_file" accept=".json,application/json" style="display:none">
+    <div class="hr"></div>
+    <button class="sm danger" id="m_reset">Сбросить всё</button>
+    <div class="row" style="margin-top:16px">
+      <button class="ghost" onclick="closeModal()">Закрыть</button>
+    </div>
+  `);
+  document.getElementById('m_exp').onclick = ()=>{
+    const blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'gym_backup_'+todayISO()+'.json'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast('Файл сохранён');
+  };
+  document.getElementById('m_imp').onclick = ()=> document.getElementById('m_file').click();
+  document.getElementById('m_file').onchange = (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{
+        const data = JSON.parse(r.result);
+        if(!data || !Array.isArray(data.groups)) throw 0;
+        if(!confirm('Заменить текущие данные импортом?')) return;
+        db = { groups:data.groups.map(g=>({
+          id: g.id || uid(),
+          name: String(g.name||'').trim() || 'Без названия',
+          goal: Math.max(0, parseInt(g.goal,10)||0),
+          checked: Array.isArray(g.checked)? g.checked.map(Boolean) : []
+        })), days: data.days || {} };
+        save(); closeModal(); render(); toast('Импортировано');
+      }catch(err){ toast('Неверный файл'); }
+    };
+    r.readAsText(f);
+  };
+  document.getElementById('m_reset').onclick = ()=>{
+    if(!confirm('Удалить ВСЕ данные? Это необратимо.')) return;
+    if(!confirm('Точно? Лучше сначала сделай экспорт.')) return;
+    db = { groups:[], days:{} };
+    save(); closeModal(); render(); toast('Сброшено');
+  };
+}
+
+/* ============ Глобальные кнопки ============ */
+document.getElementById('btnAdd').onclick = ()=> openGroupModal();
+document.getElementById('btnMenu').onclick = openMenu;
+
+/* ============ Старт ============ */
+render();
+
+/* ============ Service Worker (офлайн на GitHub Pages) ============ */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
